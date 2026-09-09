@@ -1,0 +1,1678 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora y Cotizador - KIUBO STUDIO</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Leaflet Maps CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- html2pdf.js for Client PDF Generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'kiubo-indigo': '#292567',
+                        'kiubo-purple': '#3d378f',
+                        'kiubo-yellow': '#F5B718',
+                        'kiubo-yellow-hover': '#e0a612',
+                        'kiubo-bg': '#f4f4f9',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #f4f4f9;
+        }
+        .leaflet-popup-content-wrapper {
+            border-radius: 12px;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        /* Estilos para el mapa en pantalla completa */
+        .map-fullscreen {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            z-index: 9999 !important;
+            border-radius: 0 !important;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen pb-12">
+
+    <!-- Header / Navbar -->
+    <header class="bg-kiubo-indigo text-white shadow-lg sticky top-0 z-30 border-b-4 border-kiubo-yellow">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-kiubo-indigo border-2 border-kiubo-yellow rounded-xl flex items-center justify-center p-1.5 shadow-md">
+                    <svg viewBox="0 0 100 130" class="w-full h-full text-kiubo-yellow fill-current" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M 2 24 C 2 10 25 0 52 22 C 34 32 30 30 2 24 Z" />
+                        <rect x="66" y="0" width="28" height="32" rx="1" />
+                        <path d="M 0 43 L 34 43 L 38 72 C 39 88 50 94 66 94 L 66 43 L 98 43 L 98 60 C 98 100 70 130 38 130 C 10 130 0 100 0 65 Z" />
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-xl font-extrabold tracking-wide text-white flex items-center gap-2">
+                        KIUBO <span class="text-kiubo-yellow text-xs px-2 py-0.5 rounded-md bg-white/10 border border-kiubo-yellow/30 font-semibold">STUDIO</span>
+                    </h1>
+                    <p class="text-[11px] text-slate-300 font-medium">Calculadora de Cotizaciones y Repartición Financiera</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <button id="btn-admin-puntos" title="Administrar Puntos Medios"
+                    class="px-3 py-2 bg-white/10 hover:bg-white/20 text-kiubo-yellow text-xs font-bold rounded-xl border border-kiubo-yellow/40 transition-all flex items-center gap-2">
+                    <i class="fa-solid fa-map-location-dot"></i>
+                    <span class="hidden sm:inline">Puntos Medios</span>
+                </button>
+                <button id="btn-ver-historial-eliminados" title="Historial de Pedidos Eliminados"
+                    class="px-3 py-2 bg-white/10 hover:bg-white/20 text-slate-200 hover:text-white text-xs font-bold rounded-xl border border-white/20 transition-all flex items-center gap-2">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                    <span class="hidden sm:inline">Historial Eliminados</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
+
+        <!-- 5 Tarjetas de Resumen Financiero Superior -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <!-- Ventas Totales -->
+            <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 flex flex-col justify-between">
+                <div>
+                    <span class="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider block mb-1">VENTAS TOTALES</span>
+                    <h3 id="dash-ventas-totales" class="text-2xl font-black text-kiubo-indigo">$0.00</h3>
+                </div>
+                <span class="text-[11px] text-slate-400 font-medium mt-3 block">Total acumulado</span>
+            </div>
+
+            <!-- Fondo Kiubo -->
+            <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 flex flex-col justify-between border-l-4 border-l-indigo-900">
+                <div>
+                    <span class="text-[11px] font-extrabold text-indigo-900 uppercase tracking-wider block mb-1">FONDO KIUBO</span>
+                    <h3 id="dash-fondo-kiubo" class="text-2xl font-black text-indigo-950">$0.00</h3>
+                </div>
+                <span class="text-[11px] text-slate-500 font-medium mt-3 block">Caja de Ahorro Studio</span>
+            </div>
+
+            <!-- Mariana -->
+            <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 flex flex-col justify-between border-l-4 border-l-indigo-600">
+                <div>
+                    <span class="text-[11px] font-extrabold text-indigo-700 uppercase tracking-wider block mb-1">MARIANA</span>
+                    <h3 id="dash-mariana" class="text-2xl font-black text-indigo-700">$0.00</h3>
+                </div>
+                <span class="text-[11px] text-indigo-500 font-medium mt-3 block">Insumos + Com. + Prod.</span>
+            </div>
+
+            <!-- Joss -->
+            <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 flex flex-col justify-between border-l-4 border-l-pink-600">
+                <div>
+                    <span class="text-[11px] font-extrabold text-pink-600 uppercase tracking-wider block mb-1">JOSS</span>
+                    <h3 id="dash-joss" class="text-2xl font-black text-pink-700">$0.00</h3>
+                </div>
+                <span class="text-[11px] text-pink-500 font-medium mt-3 block">Insumos + Com. + Prod.</span>
+            </div>
+
+            <!-- Fanny -->
+            <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 flex flex-col justify-between border-l-4 border-l-emerald-600">
+                <div>
+                    <span class="text-[11px] font-extrabold text-emerald-600 uppercase tracking-wider block mb-1">FANNY</span>
+                    <h3 id="dash-fanny" class="text-2xl font-black text-emerald-700">$0.00</h3>
+                </div>
+                <span class="text-[11px] text-emerald-500 font-medium mt-3 block">Insumos + Com. + Prod.</span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+            <!-- Left Form Column -->
+            <div class="lg:col-span-7 space-y-6">
+
+                <!-- Card 0: Datos del Cliente -->
+                <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80">
+                    <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
+                        <h2 class="text-sm font-extrabold text-kiubo-indigo flex items-center gap-2">
+                            <i class="fa-solid fa-user-tag text-kiubo-yellow"></i> 1. Datos del Cliente
+                        </h2>
+                        <span id="badge-folio-actual" class="text-[11px] font-mono font-bold px-2.5 py-1 rounded-full bg-slate-100 text-kiubo-indigo border border-slate-200">
+                            Folio: #KB-0001
+                        </span>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="sm:col-span-2">
+                            <label class="block text-[11px] font-bold text-slate-600 mb-1">Nombre del Cliente</label>
+                            <input type="text" id="input-cliente" placeholder="Introducir nombre del cliente"
+                                class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-kiubo-purple text-xs">
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-600 mb-1">Número de Teléfono (Opcional)</label>
+                            <input type="tel" id="input-telefono" placeholder="Ej: 9981234567"
+                                class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-kiubo-purple text-xs">
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-600 mb-1">Instagram / Red Social (Opcional)</label>
+                            <input type="text" id="input-instagram" placeholder="Ej: @tunombre / ig"
+                                class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-kiubo-purple text-xs">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 1: Datos del Pedido -->
+                <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80">
+                    <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
+                        <h2 class="text-sm font-extrabold text-kiubo-indigo flex items-center gap-2">
+                            <i class="fa-solid fa-pen-to-square text-kiubo-yellow"></i> 2. Datos del Pedido
+                        </h2>
+                        <span id="badge-mayoreo" class="text-[10px] font-bold px-2.5 py-1 rounded-full bg-blue-50 text-kiubo-indigo border border-blue-200">
+                            Menudeo (1 - 11 pz)
+                        </span>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+                        <div class="sm:col-span-2">
+                            <label class="block text-[11px] font-bold text-slate-600 mb-1">Fecha Aprox. de Entrega</label>
+                            <input type="date" id="input-fecha-entrega"
+                                class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-kiubo-purple text-xs font-bold text-kiubo-indigo bg-white">
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-600 mb-1">Producto</label>
+                            <select id="select-producto" class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-kiubo-purple text-xs bg-white">
+                                <option value="Playera">Playera Textil</option>
+                                <option value="Taza">Taza Cerámica</option>
+                                <option value="Gorra">Gorra</option>
+                                <option value="Pin / Fotobotón">Pin / Fotobotón</option>
+                                <option value="Stickers">Stickers (Pliego/Pz)</option>
+                                <option value="Etiqueta DTF">Etiqueta DTF para Ropa</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-600 mb-1">Técnica de Impresión</label>
+                            <select id="select-tecnica" class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-kiubo-purple text-xs bg-white">
+                                <option value="DTF Textil">DTF Textil</option>
+                                <option value="Sublimación">Sublimación</option>
+                                <option value="Bordado">Bordado</option>
+                                <option value="Serigrafía">Serigrafía (Mayoreo 12+)</option>
+                                <option value="Armado Manual">Armado Manual</option>
+                                <option value="Impresión y Corte">Impresión y Corte</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-600 mb-1">Cantidad (Piezas)</label>
+                            <input type="number" id="input-cantidad" min="1" value="1"
+                                class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-kiubo-purple text-xs font-bold text-kiubo-indigo">
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-600 mb-1">Precio Unitario ($ MXN)</label>
+                            <input type="number" id="input-precio-unitario" min="0" value="180"
+                                class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-kiubo-purple text-xs font-bold">
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-600 mb-1">Costo Insumo p/Pz ($ MXN)</label>
+                            <input type="number" id="input-costo-insumo" min="0" value="80"
+                                class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-kiubo-purple text-xs font-bold text-slate-600">
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-600 mb-1">Inversora (Pagó Insumos)</label>
+                            <select id="select-inversora" class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-kiubo-purple text-xs bg-white">
+                                <option value="Mariana">Mariana</option>
+                                <option value="Joss">Joss</option>
+                                <option value="Fanny">Fanny</option>
+                            </select>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Card 2: Participación del Equipo -->
+                <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80">
+                    <h2 class="text-sm font-extrabold text-kiubo-indigo flex items-center gap-2 pb-3 mb-4 border-b border-slate-100">
+                        <i class="fa-solid fa-users text-kiubo-yellow"></i> 3. Asignación de Trabajo
+                    </h2>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-600 mb-1">Vendedora (Comisión 15%)</label>
+                            <select id="select-vendedora" class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-kiubo-purple text-xs bg-white">
+                                <option value="Fanny">Fanny</option>
+                                <option value="Joss">Joss</option>
+                                <option value="Mariana">Mariana</option>
+                                <option value="Ninguna">Ninguna (Venta Directa KIUBO)</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-600 mb-1">Productora / Mano de Obra</label>
+                            <select id="select-productora" class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-kiubo-purple text-xs bg-white">
+                                <option value="Mariana">Mariana (Planchas, Serigrafía, Bordado)</option>
+                                <option value="Joss">Joss (Fotobotones / Pines)</option>
+                                <option value="Fanny">Fanny (Stickers y Entregas)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 3: Modalidad de Entrega y Mapa -->
+                <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 space-y-4">
+                    <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+                        <h2 class="text-sm font-extrabold text-kiubo-indigo flex items-center gap-2">
+                            <i class="fa-solid fa-truck-fast text-kiubo-yellow"></i> 4. Entrega y Logística
+                        </h2>
+                        <span id="map-location-tag" class="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded-lg truncate max-w-[200px]">
+                            Cancún, Q.R.
+                        </span>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-600 mb-1">Tipo de Entrega</label>
+                            <select id="select-modalidad-entrega" class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-kiubo-purple text-xs bg-white font-bold text-kiubo-indigo">
+                                <option value="punto_medio">📍 Punto Medio Acordado</option>
+                                <option value="domicilio">🚚 Entrega a Domicilio</option>
+                                <option value="taller">🏢 Retiro en Taller (Sin costo)</option>
+                            </select>
+                        </div>
+
+                        <div id="container-punto-medio">
+                            <label class="block text-[11px] font-bold text-slate-600 mb-1">Seleccionar Punto Medio</label>
+                            <select id="select-punto-medio" class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-kiubo-purple text-xs bg-white">
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Campos de Domicilio Detallados -->
+                    <div id="container-domicilio" class="hidden space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div class="relative">
+                                <label class="block text-[11px] font-bold text-slate-700 mb-1">Circuito / Fracc. / Región / SM</label>
+                                <input type="text" id="input-circuito-region" placeholder="Ej: Circuito Mallorca, SM 51" autocomplete="off"
+                                    class="w-full px-3 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-kiubo-purple bg-white">
+                            </div>
+
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-700 mb-1">Avenida Cercana / Calle Principal</label>
+                                <div class="flex gap-1.5">
+                                    <div class="relative w-full">
+                                        <input type="text" id="input-direccion-domicilio" placeholder="Ej: Av. Nichupté, Calle 12..." autocomplete="off"
+                                            class="w-full px-3 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-kiubo-purple bg-white">
+                                    </div>
+                                    <button type="button" id="btn-buscar-direccion" class="px-3 py-1.5 bg-kiubo-purple text-white font-bold rounded-lg hover:bg-kiubo-indigo transition-all shrink-0 flex items-center gap-1.5">
+                                        <i class="fa-solid fa-magnifying-glass"></i> Ubicar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Lista de sugerencias de autocompletado -->
+                        <div class="relative">
+                            <ul id="address-suggestions" class="hidden absolute left-0 right-0 top-0 bg-white border border-slate-200 rounded-xl shadow-xl max-h-52 overflow-y-auto z-50 divide-y divide-slate-100 text-xs">
+                            </ul>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 border-t border-slate-200 pt-3">
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-700 mb-1">Tipo de Inmueble</label>
+                                <select id="select-tipo-inmueble" class="w-full px-3 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-kiubo-purple bg-white font-semibold">
+                                    <option value="casa">🏠 Casa Particular</option>
+                                    <option value="departamento">🏢 Departamento / Edificio</option>
+                                    <option value="local">🏪 Local / Negocio</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-700 mb-1">¿Es Privada / Condominio?</label>
+                                <select id="select-es-privada" class="w-full px-3 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-kiubo-purple bg-white font-semibold">
+                                    <option value="no">No (Calle abierta)</option>
+                                    <option value="si">Sí (Acceso controlado / Privada)</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label class="block text-[11px] font-bold text-slate-700 mb-1">Número de Casa / Depto</label>
+                                <input type="text" id="input-num-casa" placeholder="Ej: Casa #14"
+                                    class="w-full px-3 py-1.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-kiubo-purple bg-white font-bold text-kiubo-indigo">
+                            </div>
+                        </div>
+
+                        <!-- Campos condicionales para Privada -->
+                        <div id="container-detalles-privada" class="hidden grid grid-cols-1 sm:grid-cols-2 gap-3 bg-amber-50/60 p-3 rounded-lg border border-amber-200/80">
+                            <div>
+                                <label class="block text-[11px] font-bold text-amber-900 mb-1">Nombre de la Privada / Clúster</label>
+                                <input type="text" id="input-nombre-privada" placeholder="Ej: Privada Las Palmas"
+                                    class="w-full px-3 py-1.5 rounded-lg border border-amber-200 focus:outline-none focus:ring-2 focus:ring-kiubo-purple bg-white">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] font-bold text-amber-900 mb-1">Manzana (Mz) / Lote (Lt)</label>
+                                <input type="text" id="input-mz-lote" placeholder="Ej: Mz 12 Lt 5"
+                                    class="w-full px-3 py-1.5 rounded-lg border border-amber-200 focus:outline-none focus:ring-2 focus:ring-kiubo-purple bg-white">
+                            </div>
+                            <div class="sm:col-span-2">
+                                <label class="block text-[11px] font-bold text-amber-900 mb-1">Instrucciones para Portón / Vigilancia</label>
+                                <input type="text" id="input-acceso-privada" placeholder="Ej: Avisar en caseta a nombre de Mariana"
+                                    class="w-full px-3 py-1.5 rounded-lg border border-amber-200 focus:outline-none focus:ring-2 focus:ring-kiubo-purple bg-white">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-600 mb-1">Costo de Envío / Entrega ($ MXN)</label>
+                        <input type="number" id="input-costo-envio" min="0" value="30"
+                            class="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-kiubo-purple text-xs font-bold text-kiubo-indigo">
+                    </div>
+
+                    <div class="space-y-1 relative">
+                        <div id="main-map" class="w-full h-56 rounded-xl border border-slate-200 shadow-inner z-10 transition-all duration-300"></div>
+                        <!-- Botón flotante para expandir/minimizar mapa -->
+                        <button type="button" id="btn-toggle-fullscreen" title="Pantalla Completa"
+                            class="absolute top-3 right-3 z-20 w-8 h-8 bg-white hover:bg-slate-100 text-kiubo-indigo rounded-lg shadow-md border border-slate-200 flex items-center justify-center text-xs font-bold transition-all">
+                            <i id="icon-fullscreen" class="fa-solid fa-expand"></i>
+                        </button>
+                        <p class="text-[10px] text-slate-400 text-center">Escribe la dirección y presiona Enter o presiona Ubicar para actualizar el mapa.</p>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Right Column -->
+            <div class="lg:col-span-5 space-y-6">
+
+                <div class="bg-kiubo-indigo text-white rounded-2xl p-6 shadow-xl border border-kiubo-indigo/50 sticky top-20">
+                    <div class="flex items-center justify-between pb-4 border-b border-white/10 mb-4">
+                        <h2 class="text-base font-extrabold text-kiubo-yellow flex items-center gap-2">
+                            <i class="fa-solid fa-calculator"></i> Desglose de Cotización
+                        </h2>
+                        <span class="text-xs bg-white/10 px-2.5 py-1 rounded-lg text-slate-200 font-semibold" id="text-delivery-summary">
+                            Punto Medio (+$30)
+                        </span>
+                    </div>
+
+                    <div class="space-y-3 mb-6">
+                        <div class="flex justify-between items-center text-xs text-slate-300">
+                            <span>Subtotal Productos:</span>
+                            <span id="preview-subtotal-productos" class="font-bold text-white">$180.00</span>
+                        </div>
+                        <div class="flex justify-between items-center text-xs text-slate-300">
+                            <span>Costo de Envío:</span>
+                            <span id="preview-costo-envio" class="font-bold text-white">$30.00</span>
+                        </div>
+                        <div class="flex justify-between items-center text-base font-extrabold text-kiubo-yellow pt-2 border-t border-white/10">
+                            <span>Total al Cliente:</span>
+                            <span id="preview-total-cliente" class="text-xl">$210.00 MXN</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-white/10 p-3 rounded-xl mb-4 border border-white/10">
+                        <p class="text-[11px] font-bold text-slate-200 uppercase tracking-wider mb-2">Repartición Financiera Interna</p>
+                        
+                        <div class="space-y-2 text-xs">
+                            <div class="flex justify-between items-center text-slate-200">
+                                <span class="flex items-center gap-1.5">
+                                    <i class="fa-solid fa-box-open text-amber-400"></i> Recuperación Insumos (<span id="preview-nombre-inversora" class="font-bold">Mariana</span>):
+                                </span>
+                                <span id="preview-monto-insumos" class="font-bold text-amber-300">$80.00</span>
+                            </div>
+
+                            <div class="flex justify-between items-center text-slate-200">
+                                <span class="flex items-center gap-1.5">
+                                    <i class="fa-solid fa-hand-holding-dollar text-emerald-400"></i> Comisión Vendedora (<span id="preview-nombre-vendedora" class="font-bold">Fanny</span> - 15%):
+                                </span>
+                                <span id="preview-monto-vendedora" class="font-bold text-emerald-300">$27.00</span>
+                            </div>
+
+                            <div class="flex justify-between items-center text-slate-200">
+                                <span class="flex items-center gap-1.5">
+                                    <i class="fa-solid fa-vault text-kiubo-yellow"></i> Fondo KIUBO STUDIO (25% Utilidad):
+                                </span>
+                                <span id="preview-monto-kiubo" class="font-bold text-kiubo-yellow">$25.00</span>
+                            </div>
+
+                            <div class="flex justify-between items-center text-white pt-2 border-t border-white/10">
+                                <span class="flex items-center gap-1.5 font-bold">
+                                    <i class="fa-solid fa-screwdriver-wrench text-blue-400"></i> Pago Producción (<span id="preview-nombre-productora" class="font-bold">Mariana</span>):
+                                </span>
+                                <span id="preview-monto-produccion" class="font-extrabold text-blue-300 text-sm">$48.00</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button id="btn-registrar-pedido" class="w-full py-3.5 bg-kiubo-yellow hover:bg-kiubo-yellow-hover text-kiubo-indigo font-extrabold rounded-xl shadow-lg transition-all flex items-center justify-center gap-2 text-sm">
+                        <i class="fa-solid fa-circle-check"></i> Registrar y Guardar Pedido
+                    </button>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- History Table Section -->
+        <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 space-y-4">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 pb-3 border-b border-slate-100">
+                <div>
+                    <h2 class="text-base font-extrabold text-kiubo-indigo flex items-center gap-2">
+                        <i class="fa-solid fa-list-check text-kiubo-yellow"></i> Historial de Cotizaciones y Pedidos
+                    </h2>
+                    <p class="text-xs text-slate-500">Registro histórico de pedidos activos con folios secuenciales automáticos.</p>
+                </div>
+                
+                <div class="flex items-center gap-2">
+                    <button id="btn-exportar-csv" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 shadow-sm">
+                        <i class="fa-solid fa-file-excel"></i> Exportar a Excel (.CSV)
+                    </button>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs text-slate-600 border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-700 border-b border-slate-200 font-bold uppercase text-[10px]">
+                            <th class="p-3">Folio</th>
+                            <th class="p-3">Cliente</th>
+                            <th class="p-3">Entrega Aprox.</th>
+                            <th class="p-3">Producto / Cant.</th>
+                            <th class="p-3">Entrega</th>
+                            <th class="p-3">Total Cliente</th>
+                            <th class="p-3">Insumos</th>
+                            <th class="p-3">Comisión</th>
+                            <th class="p-3">Fondo KIUBO</th>
+                            <th class="p-3">Producción</th>
+                            <th class="p-3 text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-pedidos-body" class="divide-y divide-slate-100">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Modal: Administrar Puntos Medios -->
+    <div id="modal-puntos-medios" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center pb-3 border-b border-slate-100">
+                <h3 class="text-base font-extrabold text-kiubo-indigo flex items-center gap-2">
+                    <i class="fa-solid fa-map-pin text-kiubo-yellow"></i> Administrar Puntos Medios y Tarifas
+                </h3>
+                <button id="btn-cerrar-modal-pm" class="text-slate-400 hover:text-slate-600 p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="space-y-2">
+                <label class="block text-xs font-bold text-slate-700">Ubicar o Arrastrar Pin para Asignar Coordenadas</label>
+                <div id="modal-pm-map" class="w-full h-48 rounded-xl border border-slate-200 shadow-inner"></div>
+            </div>
+
+            <form id="form-punto-medio" class="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                <input type="hidden" id="pm-id-edit">
+                
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-600 mb-1">Nombre del Punto Medio</label>
+                    <input type="text" id="pm-nombre" placeholder="Ej: Plaza Las Américas" required
+                        class="w-full px-3 py-1.5 rounded-lg border border-slate-200 text-xs">
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-600 mb-1">Costo de Envío ($ MXN)</label>
+                    <input type="number" id="pm-costo" min="0" value="30" required
+                        class="w-full px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold">
+                </div>
+
+                <div class="sm:col-span-2">
+                    <label class="block text-[11px] font-bold text-slate-600 mb-1">Dirección / Referencia</label>
+                    <input type="text" id="pm-direccion" placeholder="Ej: Entradas principales por la fuente" required
+                        class="w-full px-3 py-1.5 rounded-lg border border-slate-200 text-xs">
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-600 mb-1">Latitud</label>
+                    <input type="text" id="pm-lat" readonly class="w-full px-3 py-1.5 rounded-lg border border-slate-200 text-xs bg-slate-100 text-slate-500 font-mono">
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-600 mb-1">Longitud</label>
+                    <input type="text" id="pm-lng" readonly class="w-full px-3 py-1.5 rounded-lg border border-slate-200 text-xs bg-slate-100 text-slate-500 font-mono">
+                </div>
+
+                <div class="sm:col-span-2 flex justify-end gap-2 pt-2">
+                    <button type="button" id="btn-cancelar-pm" class="px-3 py-1.5 text-xs font-bold text-slate-500 hover:bg-slate-200 rounded-lg hidden">
+                        Cancelar
+                    </button>
+                    <button type="submit" id="btn-guardar-pm" class="px-4 py-1.5 bg-kiubo-indigo hover:bg-kiubo-purple text-white text-xs font-bold rounded-lg transition-all">
+                        <i class="fa-solid fa-plus"></i> Guardar Punto Medio
+                    </button>
+                </div>
+            </form>
+
+            <div class="space-y-2">
+                <h4 class="text-xs font-bold text-slate-700">Puntos Medios Registrados</h4>
+                <div class="overflow-x-auto max-h-48 border border-slate-200 rounded-xl">
+                    <table class="w-full text-left text-xs text-slate-600">
+                        <thead class="bg-slate-100 text-slate-700 sticky top-0 font-bold">
+                            <tr>
+                                <th class="p-2">Nombre</th>
+                                <th class="p-2">Costo</th>
+                                <th class="p-2">Dirección</th>
+                                <th class="p-2 text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-pm-body" class="divide-y divide-slate-100">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Confirmación de Eliminación de Pedido -->
+    <div id="modal-eliminar-pedido" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+            <div class="flex items-center gap-3 text-red-600 pb-3 border-b border-slate-100">
+                <i class="fa-solid fa-triangle-exclamation text-2xl"></i>
+                <h3 class="text-base font-extrabold text-slate-800">¿Estás seguro de eliminar el pedido?</h3>
+            </div>
+            
+            <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs space-y-1">
+                <p><span class="font-bold text-slate-500">Folio:</span> <span id="del-modal-folio" class="font-mono font-bold text-kiubo-indigo"></span></p>
+                <p><span class="font-bold text-slate-500">Cliente:</span> <span id="del-modal-cliente" class="font-bold text-slate-800"></span></p>
+                <p class="text-red-700 text-[10px] mt-1 font-semibold">⚠️ El folio se perderá permanentemente y no se reasignará a futuros pedidos.</p>
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">Razón o Motivo de Eliminación <span class="text-red-500">*</span></label>
+                <textarea id="del-modal-razon" rows="3" placeholder="Explique por qué se elimina el pedido..."
+                    class="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:ring-2 focus:ring-red-500"></textarea>
+            </div>
+
+            <div class="flex justify-end gap-2 pt-2">
+                <button type="button" id="btn-cancelar-eliminar" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all">
+                    No
+                </button>
+                <button type="button" id="btn-confirmar-eliminar" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-xl transition-all">
+                    Sí, Eliminar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Historial de Pedidos Eliminados -->
+    <div id="modal-historial-eliminados" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-white rounded-2xl max-w-4xl w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center pb-3 border-b border-slate-100">
+                <h3 class="text-base font-extrabold text-kiubo-indigo flex items-center gap-2">
+                    <i class="fa-solid fa-clock-rotate-left text-kiubo-yellow"></i> Historial de Pedidos Eliminados
+                </h3>
+                <button id="btn-cerrar-modal-eliminados" class="text-slate-400 hover:text-slate-600 p-1">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+
+            <div class="overflow-x-auto max-h-96 border border-slate-200 rounded-xl">
+                <table class="w-full text-left text-xs text-slate-600">
+                    <thead class="bg-slate-100 text-slate-700 sticky top-0 font-bold uppercase text-[10px]">
+                        <tr>
+                            <th class="p-3">Folio</th>
+                            <th class="p-3">Cliente</th>
+                            <th class="p-3">Producto</th>
+                            <th class="p-3">Fecha Eliminación</th>
+                            <th class="p-3">Motivo / Razón</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-eliminados-body" class="divide-y divide-slate-100">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const DEFAULT_PUNTOS_MEDIOS = [
+            { id: 'pm_1', nombre: 'Plaza Las Américas', costo: 30, direccion: 'Av. Tulum, Mza 4, SM 7, Cancún', lat: 21.1462, lng: -86.8225 },
+            { id: 'pm_2', nombre: 'Plaza Outlet / Grand Outlet', costo: 35, direccion: 'Av. Andrés Quintana Roo, SM 39, Cancún', lat: 21.1554, lng: -86.8521 },
+            { id: 'pm_3', nombre: 'Cancún Mall (Ruta 5)', costo: 40, direccion: 'Av. Costa Maya, SM 228, Cancún', lat: 21.1895, lng: -86.8458 },
+            { id: 'pm_4', nombre: 'Parque Las Palapas', costo: 30, direccion: 'Centro, SM 22, Cancún', lat: 21.1619, lng: -86.8267 }
+        ];
+
+        let puntosMediosList = [];
+        let pedidosHistorial = [];
+        let pedidosEliminados = [];
+        let map = null;
+        let mapMarker = null;
+        let modalMap = null;
+        let modalMapMarker = null;
+        let pedidoIdParaEliminar = null;
+
+        const selectProducto = document.getElementById('select-producto');
+        const selectTecnica = document.getElementById('select-tecnica');
+        const inputCantidad = document.getElementById('input-cantidad');
+        const inputPrecioUnitario = document.getElementById('input-precio-unitario');
+        const inputCostoInsumo = document.getElementById('input-costo-insumo');
+        const selectInversora = document.getElementById('select-inversora');
+        const selectVendedora = document.getElementById('select-vendedora');
+        const selectProductora = document.getElementById('select-productora');
+        const badgeMayoreo = document.getElementById('badge-mayoreo');
+        
+        const inputCliente = document.getElementById('input-cliente');
+        const inputTelefono = document.getElementById('input-telefono');
+        const inputInstagram = document.getElementById('input-instagram');
+        const inputFechaEntrega = document.getElementById('input-fecha-entrega');
+        const badgeFolioActual = document.getElementById('badge-folio-actual');
+
+        const btnRegistrarPedido = document.getElementById('btn-registrar-pedido');
+        const tablaPedidosBody = document.getElementById('tabla-pedidos-body');
+        const btnExportarCsv = document.getElementById('btn-exportar-csv');
+
+        const selectModalidadEntrega = document.getElementById('select-modalidad-entrega');
+        const containerPuntoMedio = document.getElementById('container-punto-medio');
+        const containerDomicilio = document.getElementById('container-domicilio');
+        const selectPuntoMedio = document.getElementById('select-punto-medio');
+        
+        const inputCircuitoRegion = document.getElementById('input-circuito-region');
+        const inputDireccionDomicilio = document.getElementById('input-direccion-domicilio');
+        const selectTipoInmueble = document.getElementById('select-tipo-inmueble');
+        const selectEsPrivada = document.getElementById('select-es-privada');
+        const inputNumCasa = document.getElementById('input-num-casa');
+        const containerDetallesPrivada = document.getElementById('container-detalles-privada');
+        const inputNombrePrivada = document.getElementById('input-nombre-privada');
+        const inputMzLote = document.getElementById('input-mz-lote');
+        const inputAccesoPrivada = document.getElementById('input-acceso-privada');
+
+        const addressSuggestions = document.getElementById('address-suggestions');
+        const btnBuscarDireccion = document.getElementById('btn-buscar-direccion');
+        const inputCostoEnvio = document.getElementById('input-costo-envio');
+        const textDeliverySummary = document.getElementById('text-delivery-summary');
+        const mapLocationTag = document.getElementById('map-location-tag');
+
+        const btnAdminPuntos = document.getElementById('btn-admin-puntos');
+        const modalPuntosMedios = document.getElementById('modal-puntos-medios');
+        const btnCerrarModalPm = document.getElementById('btn-cerrar-modal-pm');
+        const formPuntoMedio = document.getElementById('form-punto-medio');
+        const pmIdEdit = document.getElementById('pm-id-edit');
+        const pmNombre = document.getElementById('pm-nombre');
+        const pmCosto = document.getElementById('pm-costo');
+        const pmDireccion = document.getElementById('pm-direccion');
+        const pmLat = document.getElementById('pm-lat');
+        const pmLng = document.getElementById('pm-lng');
+        const tablaPmBody = document.getElementById('tabla-pm-body');
+        const btnCancelarPm = document.getElementById('btn-cancelar-pm');
+
+        const mainMapElement = document.getElementById('main-map');
+        const btnToggleFullscreen = document.getElementById('btn-toggle-fullscreen');
+        const iconFullscreen = document.getElementById('icon-fullscreen');
+
+        // Elementos Modales Eliminación e Historial
+        const btnVerHistorialEliminados = document.getElementById('btn-ver-historial-eliminados');
+        const modalHistorialEliminados = document.getElementById('modal-historial-eliminados');
+        const btnCerrarModalEliminados = document.getElementById('btn-cerrar-modal-eliminados');
+        const tablaEliminadosBody = document.getElementById('tabla-eliminados-body');
+
+        const modalEliminarPedido = document.getElementById('modal-eliminar-pedido');
+        const delModalFolio = document.getElementById('del-modal-folio');
+        const delModalCliente = document.getElementById('del-modal-cliente');
+        const delModalRazon = document.getElementById('del-modal-razon');
+        const btnCancelarEliminar = document.getElementById('btn-cancelar-eliminar');
+        const btnConfirmarEliminar = document.getElementById('btn-confirmar-eliminar');
+
+        window.addEventListener('DOMContentLoaded', () => {
+            initLeafletMap();
+            loadPuntosMedios();
+            updatePresetValues();
+            calculatePreview();
+            loadLocalStorage();
+            updateNextFolioBadge();
+
+            // Establecer fecha por defecto en fecha aprox de entrega (mañana)
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 3);
+            inputFechaEntrega.value = tomorrow.toISOString().slice(0, 10);
+
+            selectProducto.addEventListener('change', () => { updatePresetValues(); calculatePreview(); });
+            selectTecnica.addEventListener('change', calculatePreview);
+            inputCantidad.addEventListener('input', calculatePreview);
+            inputPrecioUnitario.addEventListener('input', calculatePreview);
+            inputCostoInsumo.addEventListener('input', calculatePreview);
+            selectInversora.addEventListener('change', calculatePreview);
+            selectVendedora.addEventListener('change', calculatePreview);
+            selectProductora.addEventListener('change', calculatePreview);
+
+            selectModalidadEntrega.addEventListener('change', handleDeliveryModeChange);
+            selectPuntoMedio.addEventListener('change', handlePuntoMedioSelectChange);
+            selectEsPrivada.addEventListener('change', handlePrivadaToggle);
+            inputCostoEnvio.addEventListener('input', calculatePreview);
+
+            inputDireccionDomicilio.addEventListener('input', handleAddressInputDebounced);
+            inputCircuitoRegion.addEventListener('input', handleAddressInputDebounced);
+            btnBuscarDireccion.addEventListener('click', locateAddressOnMap);
+            
+            inputDireccionDomicilio.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    hideAddressSuggestions();
+                    locateAddressOnMap();
+                }
+            });
+
+            inputCircuitoRegion.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    hideAddressSuggestions();
+                    locateAddressOnMap();
+                }
+            });
+
+            document.addEventListener('click', (e) => {
+                if (containerDomicilio && !containerDomicilio.contains(e.target)) {
+                    hideAddressSuggestions();
+                }
+            });
+
+            btnToggleFullscreen.addEventListener('click', toggleMapFullscreen);
+
+            btnRegistrarPedido.addEventListener('click', handleRegisterOrder);
+            btnExportarCsv.addEventListener('click', exportToCSV);
+            btnAdminPuntos.addEventListener('click', openModalPM);
+            btnCerrarModalPm.addEventListener('click', closeModalPM);
+            formPuntoMedio.addEventListener('submit', handleSavePuntoMedio);
+            btnCancelarPm.addEventListener('click', resetFormPM);
+
+            btnVerHistorialEliminados.addEventListener('click', openModalEliminados);
+            btnCerrarModalEliminados.addEventListener('click', closeModalEliminados);
+            btnCancelarEliminar.addEventListener('click', closeDeleteModal);
+            btnConfirmarEliminar.addEventListener('click', executeDeleteOrder);
+        });
+
+        function toggleMapFullscreen() {
+            mainMapElement.classList.toggle('map-fullscreen');
+            const isFull = mainMapElement.classList.contains('map-fullscreen');
+
+            if (isFull) {
+                iconFullscreen.className = "fa-solid fa-compress";
+                btnToggleFullscreen.title = "Minimizar Mapa";
+                btnToggleFullscreen.classList.add('fixed', 'top-4', 'right-4', 'z-[10000]');
+            } else {
+                iconFullscreen.className = "fa-solid fa-expand";
+                btnToggleFullscreen.title = "Pantalla Completa";
+                btnToggleFullscreen.classList.remove('fixed', 'top-4', 'right-4', 'z-[10000]');
+            }
+
+            setTimeout(() => {
+                if (map) map.invalidateSize();
+            }, 100);
+        }
+
+        function handlePrivadaToggle() {
+            if (selectEsPrivada.value === 'si') {
+                containerDetallesPrivada.classList.remove('hidden');
+            } else {
+                containerDetallesPrivada.classList.add('hidden');
+            }
+        }
+
+        function initLeafletMap() {
+            const defaultLat = 21.1619;
+            const defaultLng = -86.8267;
+
+            map = L.map('main-map').setView([defaultLat, defaultLng], 12);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '&copy; OpenStreetMap'
+            }).addTo(map);
+
+            setMapMarker(defaultLat, defaultLng, 'Cancún, Q.R.', true);
+
+            map.on('click', function(e) {
+                if (selectModalidadEntrega.value === 'domicilio') {
+                    setMapMarker(e.latlng.lat, e.latlng.lng, 'Punto de entrega a Domicilio', true);
+                    mapLocationTag.textContent = `Pin: ${e.latlng.lat.toFixed(4)}, ${e.latlng.lng.toFixed(4)}`;
+                }
+            });
+
+            setTimeout(() => { map.invalidateSize(); }, 300);
+        }
+
+        function setMapMarker(lat, lng, popupText, isDraggable = true) {
+            if (!map) return;
+            if (mapMarker) {
+                map.removeLayer(mapMarker);
+            }
+
+            mapMarker = L.marker([lat, lng], { draggable: isDraggable }).addTo(map)
+                .bindPopup(`<b>${popupText}</b>`)
+                .openPopup();
+
+            if (isDraggable) {
+                mapMarker.on('dragend', function(event) {
+                    const position = event.target.getLatLng();
+                    mapLocationTag.textContent = `Pin ajustado: ${position.lat.toFixed(4)}, ${position.lng.toFixed(4)}`;
+                });
+            }
+
+            map.flyTo([lat, lng], 15, { animate: true, duration: 1.2 });
+        }
+
+        let autocompleteDebounceTimer = null;
+
+        function handleAddressInputDebounced() {
+            clearTimeout(autocompleteDebounceTimer);
+            const circuito = inputCircuitoRegion.value.trim();
+            const calle = inputDireccionDomicilio.value.trim();
+            const query = `${circuito} ${calle}`.trim();
+
+            if (query.length < 3) {
+                hideAddressSuggestions();
+                return;
+            }
+
+            autocompleteDebounceTimer = setTimeout(() => {
+                fetchAddressSuggestions(query);
+            }, 300);
+        }
+
+        function fetchAddressSuggestions(query) {
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query + ', Cancún')}&addressdetails=1&limit=5`)
+                .then(res => res.json())
+                .then(data => {
+                    renderAddressSuggestions(data);
+                })
+                .catch(() => {
+                    hideAddressSuggestions();
+                });
+        }
+
+        function renderAddressSuggestions(suggestions) {
+            if (!addressSuggestions) return;
+            addressSuggestions.innerHTML = '';
+
+            if (!suggestions || suggestions.length === 0) {
+                hideAddressSuggestions();
+                return;
+            }
+
+            suggestions.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'px-3 py-2 hover:bg-purple-50 cursor-pointer flex items-center gap-2 transition-colors border-b border-slate-50 last:border-b-0';
+                
+                const nameParts = item.display_name.split(',');
+                const shortName = nameParts.slice(0, 3).join(',').trim();
+
+                li.innerHTML = `
+                    <i class="fa-solid fa-location-dot text-kiubo-purple text-xs shrink-0"></i>
+                    <div class="overflow-hidden">
+                        <span class="block font-bold text-slate-800 text-[11px] truncate">${shortName}</span>
+                        <span class="block text-[10px] text-slate-400 truncate">${item.display_name}</span>
+                    </div>
+                `;
+
+                li.addEventListener('click', () => {
+                    selectAddressSuggestion(item, shortName);
+                });
+
+                addressSuggestions.appendChild(li);
+            });
+
+            addressSuggestions.classList.remove('hidden');
+        }
+
+        function selectAddressSuggestion(item, shortName) {
+            inputDireccionDomicilio.value = shortName;
+            hideAddressSuggestions();
+
+            const lat = parseFloat(item.lat);
+            const lon = parseFloat(item.lon);
+            setMapMarker(lat, lon, `<b>Entrega:</b><br>${shortName}`, true);
+            mapLocationTag.textContent = shortName;
+        }
+
+        function hideAddressSuggestions() {
+            if (addressSuggestions) {
+                addressSuggestions.classList.add('hidden');
+            }
+        }
+
+        function locateAddressOnMap() {
+            hideAddressSuggestions();
+            const circuito = inputCircuitoRegion.value.trim();
+            const calle = inputDireccionDomicilio.value.trim();
+            const fullAddress = `${circuito} ${calle}`.trim();
+
+            if (!fullAddress) return;
+
+            const searchQuery = (fullAddress.toLowerCase().includes('cancun') || fullAddress.toLowerCase().includes('cancún'))
+                ? fullAddress 
+                : `${fullAddress}, Cancún, Quintana Roo`;
+
+            fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&addressdetails=1&limit=1`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.length > 0) {
+                        const lat = parseFloat(data[0].lat);
+                        const lon = parseFloat(data[0].lon);
+                        setMapMarker(lat, lon, `<b>Entrega:</b><br>${fullAddress}`, true);
+                        mapLocationTag.textContent = fullAddress;
+                    }
+                });
+        }
+
+        function updatePresetValues() {
+            const prod = selectProducto.value;
+
+            if (prod === 'Playera') {
+                selectTecnica.value = 'DTF Textil';
+                inputPrecioUnitario.value = 180;
+                inputCostoInsumo.value = 80;
+                selectProductora.value = 'Mariana';
+                selectInversora.value = 'Mariana';
+            } else if (prod === 'Taza') {
+                selectTecnica.value = 'Sublimación';
+                inputPrecioUnitario.value = 90;
+                inputCostoInsumo.value = 30;
+                selectProductora.value = 'Mariana';
+                selectInversora.value = 'Mariana';
+            } else if (prod === 'Gorra') {
+                selectTecnica.value = 'DTF Textil';
+                inputPrecioUnitario.value = 120;
+                inputCostoInsumo.value = 45;
+                selectProductora.value = 'Mariana';
+                selectInversora.value = 'Mariana';
+            } else if (prod === 'Pin / Fotobotón') {
+                selectTecnica.value = 'Armado Manual';
+                inputPrecioUnitario.value = 25;
+                inputCostoInsumo.value = 8;
+                selectProductora.value = 'Joss';
+                selectInversora.value = 'Joss';
+            } else if (prod === 'Stickers') {
+                selectTecnica.value = 'Impresión y Corte';
+                inputPrecioUnitario.value = 45;
+                inputCostoInsumo.value = 15;
+                selectProductora.value = 'Fanny';
+                selectInversora.value = 'Fanny';
+            } else if (prod === 'Etiqueta DTF') {
+                selectTecnica.value = 'DTF Textil';
+                inputPrecioUnitario.value = 30;
+                inputCostoInsumo.value = 10;
+                selectProductora.value = 'Mariana';
+                selectInversora.value = 'Mariana';
+            }
+        }
+
+        function handleDeliveryModeChange() {
+            const mode = selectModalidadEntrega.value;
+
+            if (mode === 'punto_medio') {
+                containerPuntoMedio.classList.remove('hidden');
+                containerDomicilio.classList.add('hidden');
+                handlePuntoMedioSelectChange();
+            } else if (mode === 'domicilio') {
+                containerPuntoMedio.classList.add('hidden');
+                containerDomicilio.classList.remove('hidden');
+                inputCostoEnvio.value = 50;
+                textDeliverySummary.textContent = "Domicilio (+$50)";
+                mapLocationTag.textContent = "Cancún, Q.R.";
+                handlePrivadaToggle();
+                locateAddressOnMap();
+                calculatePreview();
+            } else if (mode === 'taller') {
+                containerPuntoMedio.classList.add('hidden');
+                containerDomicilio.classList.add('hidden');
+                inputCostoEnvio.value = 0;
+                textDeliverySummary.textContent = "Retiro Taller ($0)";
+                mapLocationTag.textContent = "Taller KIUBO";
+                setMapMarker(21.1619, -86.8267, 'Taller KIUBO STUDIO', false);
+                calculatePreview();
+            }
+        }
+
+        function handlePuntoMedioSelectChange() {
+            const selectedId = selectPuntoMedio.value;
+            const pm = puntosMediosList.find(p => p.id === selectedId);
+
+            if (pm) {
+                inputCostoEnvio.value = pm.costo;
+                textDeliverySummary.textContent = `${pm.nombre} (+$${pm.costo})`;
+                mapLocationTag.textContent = pm.nombre;
+                setMapMarker(pm.lat, pm.lng, `<b>${pm.nombre}</b><br>${pm.direccion}`, false);
+            }
+            calculatePreview();
+        }
+
+        function calculatePreview() {
+            const cantidad = parseInt(inputCantidad.value) || 1;
+            const precioUnitario = parseFloat(inputPrecioUnitario.value) || 0;
+            const costoInsumoUnitario = parseFloat(inputCostoInsumo.value) || 0;
+            const costoEnvio = parseFloat(inputCostoEnvio.value) || 0;
+
+            if (cantidad >= 12) {
+                badgeMayoreo.textContent = "Mayoreo (12+ pz)";
+                badgeMayoreo.className = "text-[10px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200";
+            } else {
+                badgeMayoreo.textContent = "Menudeo (1 - 11 pz)";
+                badgeMayoreo.className = "text-[10px] font-bold px-2.5 py-1 rounded-full bg-blue-50 text-kiubo-indigo border border-blue-200";
+            }
+
+            const subtotalProductos = cantidad * precioUnitario;
+            const totalCliente = subtotalProductos + costoEnvio;
+            const totalInsumos = cantidad * costoInsumoUnitario;
+            const utilidadBruta = subtotalProductos - totalInsumos;
+
+            const vendedora = selectVendedora.value;
+            const comisionVendedora = (vendedora === 'Ninguna') ? 0 : (subtotalProductos * 0.15);
+            const fondoKiubo = utilidadBruta > 0 ? (utilidadBruta * 0.25) : 0;
+            const pagoProduccion = utilidadBruta - comisionVendedora - fondoKiubo;
+
+            document.getElementById('preview-subtotal-productos').textContent = `$${subtotalProductos.toFixed(2)}`;
+            document.getElementById('preview-costo-envio').textContent = `$${costoEnvio.toFixed(2)}`;
+            document.getElementById('preview-total-cliente').textContent = `$${totalCliente.toFixed(2)} MXN`;
+
+            document.getElementById('preview-nombre-inversora').textContent = selectInversora.value;
+            document.getElementById('preview-monto-insumos').textContent = `$${totalInsumos.toFixed(2)}`;
+
+            document.getElementById('preview-nombre-vendedora').textContent = selectVendedora.value;
+            document.getElementById('preview-monto-vendedora').textContent = `$${comisionVendedora.toFixed(2)}`;
+
+            document.getElementById('preview-monto-kiubo').textContent = `$${fondoKiubo.toFixed(2)}`;
+
+            document.getElementById('preview-nombre-productora').textContent = selectProductora.value;
+            document.getElementById('preview-monto-produccion').textContent = `$${pagoProduccion.toFixed(2)}`;
+
+            return {
+                cantidad,
+                precioUnitario,
+                costoInsumoUnitario,
+                subtotalProductos,
+                costoEnvio,
+                totalCliente,
+                totalInsumos,
+                utilidadBruta,
+                comisionVendedora,
+                fondoKiubo,
+                pagoProduccion
+            };
+        }
+
+        function updateGlobalDashboard() {
+            let ventasTotales = 0;
+            let fondoKiuboTotal = 0;
+            let marianaTotal = 0;
+            let jossTotal = 0;
+            let fannyTotal = 0;
+
+            pedidosHistorial.forEach(p => {
+                ventasTotales += p.totalCliente;
+                fondoKiuboTotal += p.fondoKiubo;
+
+                // Insumos van para quien invirtió (p.inversora)
+                if (p.inversora === 'Mariana') marianaTotal += p.totalInsumos;
+                if (p.inversora === 'Joss') jossTotal += p.totalInsumos;
+                if (p.inversora === 'Fanny') fannyTotal += p.totalInsumos;
+
+                // Comisión va para la vendedora (p.vendedora)
+                if (p.vendedora === 'Mariana') marianaTotal += p.comisionVendedora;
+                if (p.vendedora === 'Joss') jossTotal += p.comisionVendedora;
+                if (p.vendedora === 'Fanny') fannyTotal += p.comisionVendedora;
+
+                // Pago producción va para la productora (p.productora)
+                if (p.productora === 'Mariana') marianaTotal += p.pagoProduccion;
+                if (p.productora === 'Joss') jossTotal += p.pagoProduccion;
+                if (p.productora === 'Fanny') fannyTotal += p.pagoProduccion;
+            });
+
+            document.getElementById('dash-ventas-totales').textContent = `$${ventasTotales.toFixed(2)}`;
+            document.getElementById('dash-fondo-kiubo').textContent = `$${fondoKiuboTotal.toFixed(2)}`;
+            document.getElementById('dash-mariana').textContent = `$${marianaTotal.toFixed(2)}`;
+            document.getElementById('dash-joss').textContent = `$${jossTotal.toFixed(2)}`;
+            document.getElementById('dash-fanny').textContent = `$${fannyTotal.toFixed(2)}`;
+        }
+
+        function getNextFolioNumber() {
+            const allSaved = localStorage.getItem('kiubo_last_folio_counter');
+            let nextNum = allSaved ? parseInt(allSaved) + 1 : 1;
+            localStorage.setItem('kiubo_last_folio_counter', nextNum);
+            return nextNum;
+        }
+
+        function updateNextFolioBadge() {
+            const allSaved = localStorage.getItem('kiubo_last_folio_counter');
+            let nextNum = allSaved ? parseInt(allSaved) + 1 : 1;
+            badgeFolioActual.textContent = `Folio Siguiente: #KB-${String(nextNum).padStart(4, '0')}`;
+        }
+
+        function handleRegisterOrder() {
+            const data = calculatePreview();
+            const cliente = inputCliente.value.trim() || 'Cliente General';
+            const telefono = inputTelefono.value.trim();
+            const instagram = inputInstagram.value.trim();
+            const fechaEntrega = inputFechaEntrega.value;
+            
+            const producto = selectProducto.value;
+            const tecnica = selectTecnica.value;
+            const inversora = selectInversora.value;
+            const vendedora = selectVendedora.value;
+            const productora = selectProductora.value;
+            const modalidad = selectModalidadEntrega.value;
+
+            let detalleEntrega = '';
+            if (modalidad === 'punto_medio') {
+                const pm = puntosMediosList.find(p => p.id === selectPuntoMedio.value);
+                detalleEntrega = `Punto Medio: ${pm ? pm.nombre : 'Acordado'}`;
+            } else if (modalidad === 'domicilio') {
+                const circuito = inputCircuitoRegion.value.trim();
+                const calle = inputDireccionDomicilio.value.trim();
+                const numCasa = inputNumCasa.value.trim();
+                const tipoInmueble = selectTipoInmueble.options[selectTipoInmueble.selectedIndex].text.split(' ')[1] || 'Casa';
+                
+                let partes = [`Domicilio: ${tipoInmueble}`];
+                if (circuito) partes.push(circuito);
+                if (calle) partes.push(calle);
+                if (numCasa) partes.push(numCasa);
+
+                if (selectEsPrivada.value === 'si') {
+                    const privada = inputNombrePrivada.value.trim();
+                    const mzLote = inputMzLote.value.trim();
+                    if (privada) partes.push(`Privada: ${privada}`);
+                    if (mzLote) partes.push(mzLote);
+                }
+
+                detalleEntrega = partes.join(' - ');
+            } else {
+                detalleEntrega = 'Retiro en Taller';
+            }
+
+            const nextNum = getNextFolioNumber();
+            const folio = `#KB-${String(nextNum).padStart(4, '0')}`;
+
+            const nuevoPedido = {
+                id: Date.now(),
+                folio,
+                fechaRegistro: new Date().toLocaleDateString('es-MX'),
+                fechaEntrega: fechaEntrega || 'No especificada',
+                cliente,
+                telefono,
+                instagram,
+                producto,
+                tecnica,
+                cantidad: data.cantidad,
+                precioUnitario: data.precioUnitario,
+                totalCliente: data.totalCliente,
+                totalInsumos: data.totalInsumos,
+                inversora,
+                vendedora,
+                comisionVendedora: data.comisionVendedora,
+                fondoKiubo: data.fondoKiubo,
+                productora,
+                pagoProduccion: data.pagoProduccion,
+                modalidad,
+                costoEnvio: data.costoEnvio,
+                detalleEntrega,
+                accesoPrivada: selectEsPrivada.value === 'si' ? inputAccesoPrivada.value.trim() : ''
+            };
+
+            pedidosHistorial.unshift(nuevoPedido);
+            saveLocalStorage();
+            renderPedidosTable();
+            updateGlobalDashboard();
+            updateNextFolioBadge();
+
+            inputCliente.value = '';
+            inputTelefono.value = '';
+            inputInstagram.value = '';
+            alert(`✅ Pedido ${folio} registrado con éxito.`);
+        }
+
+        function renderPedidosTable() {
+            tablaPedidosBody.innerHTML = '';
+
+            if (pedidosHistorial.length === 0) {
+                tablaPedidosBody.innerHTML = `
+                    <tr>
+                        <td colspan="11" class="p-4 text-center text-slate-400 italic">No hay pedidos registrados en el historial.</td>
+                    </tr>
+                `;
+                return;
+            }
+
+            pedidosHistorial.forEach(p => {
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition-colors border-b border-slate-100';
+
+                tr.innerHTML = `
+                    <td class="p-3 font-mono font-bold text-kiubo-indigo">${p.folio}</td>
+                    <td class="p-3">
+                        <span class="font-bold text-slate-800 block">${p.cliente}</span>
+                        ${p.telefono ? `<span class="text-[10px] text-slate-500 block"><i class="fa-solid fa-phone"></i> ${p.telefono}</span>` : ''}
+                        ${p.instagram ? `<span class="text-[10px] text-purple-600 block"><i class="fa-brands fa-instagram"></i> ${p.instagram}</span>` : ''}
+                    </td>
+                    <td class="p-3 font-semibold text-kiubo-indigo">${p.fechaEntrega}</td>
+                    <td class="p-3">
+                        <span class="font-bold text-slate-700">${p.producto}</span>
+                        <span class="block text-[10px] text-slate-400">${p.cantidad} pz (${p.tecnica})</span>
+                    </td>
+                    <td class="p-3 text-[11px] text-slate-600 max-w-[180px]">
+                        ${p.detalleEntrega}
+                        ${p.accesoPrivada ? `<span class="block text-[9px] text-amber-700 font-bold bg-amber-50 px-1.5 py-0.5 rounded mt-0.5">Acceso: ${p.accesoPrivada}</span>` : ''}
+                    </td>
+                    <td class="p-3 font-extrabold text-kiubo-indigo">$${p.totalCliente.toFixed(2)}</td>
+                    <td class="p-3 text-amber-600 font-semibold">$${p.totalInsumos.toFixed(2)} <span class="text-[9px] text-slate-400">(${p.inversora})</span></td>
+                    <td class="p-3 text-emerald-600 font-semibold">$${p.comisionVendedora.toFixed(2)} <span class="text-[9px] text-slate-400">(${p.vendedora})</span></td>
+                    <td class="p-3 text-kiubo-yellow font-extrabold">$${p.fondoKiubo.toFixed(2)}</td>
+                    <td class="p-3 text-blue-600 font-semibold">$${p.pagoProduccion.toFixed(2)} <span class="text-[9px] text-slate-400">(${p.productora})</span></td>
+                    <td class="p-3 text-center">
+                        <div class="flex items-center justify-center gap-1">
+                            <button onclick="downloadClientPDF(${p.id})" title="Descargar PDF para Cliente"
+                                class="p-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-lg text-xs transition-all">
+                                <i class="fa-solid fa-file-pdf"></i>
+                            </button>
+                            <button onclick="openDeleteModal(${p.id})" title="Eliminar Pedido"
+                                class="p-1.5 bg-slate-100 hover:bg-slate-200 text-slate-500 rounded-lg text-xs transition-all">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+
+                tablaPedidosBody.appendChild(tr);
+            });
+        }
+
+        function openDeleteModal(id) {
+            const pedido = pedidosHistorial.find(p => p.id === id);
+            if (!pedido) return;
+
+            pedidoIdParaEliminar = id;
+            delModalFolio.textContent = pedido.folio;
+            delModalCliente.textContent = pedido.cliente;
+            delModalRazon.value = '';
+            modalEliminarPedido.classList.remove('hidden');
+        }
+
+        function closeDeleteModal() {
+            pedidoIdParaEliminar = null;
+            modalEliminarPedido.classList.add('hidden');
+        }
+
+        function executeDeleteOrder() {
+            const razon = delModalRazon.value.trim();
+            if (!razon) {
+                alert('Por favor, ingresa el motivo por el cual se va a eliminar el pedido.');
+                return;
+            }
+
+            const index = pedidosHistorial.findIndex(p => p.id === pedidoIdParaEliminar);
+            if (index >= 0) {
+                const pedidoEliminado = pedidosHistorial.splice(index, 1)[0];
+                
+                pedidoEliminado.razonEliminacion = razon;
+                pedidoEliminado.fechaEliminacion = new Date().toLocaleString('es-MX');
+                
+                pedidosEliminados.unshift(pedidoEliminado);
+                saveLocalStorage();
+                renderPedidosTable();
+                updateGlobalDashboard();
+                closeDeleteModal();
+                alert(`🗑️ Pedido ${pedidoEliminado.folio} eliminado correctamente y registrado en el historial.`);
+            }
+        }
+
+        function openModalEliminados() {
+            modalHistorialEliminados.classList.remove('hidden');
+            renderEliminadosTable();
+        }
+
+        function closeModalEliminados() {
+            modalHistorialEliminados.classList.add('hidden');
+        }
+
+        function renderEliminadosTable() {
+            tablaEliminadosBody.innerHTML = '';
+
+            if (pedidosEliminados.length === 0) {
+                tablaEliminadosBody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="p-4 text-center text-slate-400 italic">No hay registros en el historial de eliminados.</td>
+                    </tr>
+                `;
+                return;
+            }
+
+            pedidosEliminados.forEach(pe => {
+                const tr = document.createElement('tr');
+                tr.className = 'border-b border-slate-100 hover:bg-slate-50';
+                tr.innerHTML = `
+                    <td class="p-3 font-mono font-bold text-red-600">${pe.folio}</td>
+                    <td class="p-3 font-bold text-slate-800">${pe.cliente}</td>
+                    <td class="p-3 text-slate-600">${pe.producto} (${pe.cantidad} pz)</td>
+                    <td class="p-3 text-slate-500 text-[11px]">${pe.fechaEliminacion}</td>
+                    <td class="p-3 text-slate-700 font-medium">${pe.razonEliminacion}</td>
+                `;
+                tablaEliminadosBody.appendChild(tr);
+            });
+        }
+
+        function downloadClientPDF(pedidoId) {
+            const pedido = pedidosHistorial.find(p => p.id === pedidoId);
+            if (!pedido) return;
+
+            const pdfContainer = document.createElement('div');
+            pdfContainer.className = 'p-8 bg-white font-sans text-slate-800 space-y-6';
+            pdfContainer.style.width = '750px';
+
+            pdfContainer.innerHTML = `
+                <div class="flex justify-between items-center border-b-2 border-kiubo-indigo pb-4">
+                    <div>
+                        <h1 class="text-2xl font-black text-kiubo-indigo tracking-tight">KIUBO STUDIO</h1>
+                        <p class="text-xs text-slate-500">Estudio Creativo & Personalización Textil / Promocional</p>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-sm font-bold text-kiubo-purple">${pedido.folio}</span>
+                        <p class="text-xs text-slate-400">Fecha Registro: ${pedido.fechaRegistro}</p>
+                        <p class="text-xs text-kiubo-indigo font-bold">Entrega Aprox: ${pedido.fechaEntrega}</p>
+                    </div>
+                </div>
+
+                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 grid grid-cols-2 gap-4 text-xs">
+                    <div>
+                        <p class="font-bold text-slate-500 uppercase text-[10px]">Atención a:</p>
+                        <p class="font-bold text-slate-800 text-sm">${pedido.cliente}</p>
+                        ${pedido.telefono ? `<p class="text-slate-600 mt-0.5">Tel: ${pedido.telefono}</p>` : ''}
+                        ${pedido.instagram ? `<p class="text-purple-700 mt-0.5">IG: ${pedido.instagram}</p>` : ''}
+                    </div>
+                    <div>
+                        <p class="font-bold text-slate-500 uppercase text-[10px]">Modalidad de Entrega:</p>
+                        <p class="font-semibold text-slate-800">${pedido.detalleEntrega}</p>
+                        ${pedido.accesoPrivada ? `<p class="text-[10px] text-amber-700 font-semibold mt-1">Acceso / Caseta: ${pedido.accesoPrivada}</p>` : ''}
+                    </div>
+                </div>
+
+                <table class="w-full text-left text-xs border-collapse">
+                    <thead>
+                        <tr class="bg-kiubo-indigo text-white font-bold">
+                            <th class="p-2.5 rounded-l-lg">Producto</th>
+                            <th class="p-2.5">Técnica</th>
+                            <th class="p-2.5 text-center">Cant.</th>
+                            <th class="p-2.5 text-right">P. Unitario</th>
+                            <th class="p-2.5 text-right rounded-r-lg">Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        <tr>
+                            <td class="p-2.5 font-bold text-slate-800">${pedido.producto}</td>
+                            <td class="p-2.5 text-slate-600">${pedido.tecnica}</td>
+                            <td class="p-2.5 text-center font-bold">${pedido.cantidad}</td>
+                            <td class="p-2.5 text-right">$${pedido.precioUnitario.toFixed(2)}</td>
+                            <td class="p-2.5 text-right font-bold text-slate-800">$${(pedido.cantidad * pedido.precioUnitario).toFixed(2)}</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="flex justify-end pt-4 border-t border-slate-100">
+                    <div class="w-64 space-y-1.5 text-xs">
+                        <div class="flex justify-between text-slate-600">
+                            <span>Subtotal Productos:</span>
+                            <span class="font-semibold">$${(pedido.cantidad * pedido.precioUnitario).toFixed(2)}</span>
+                        </div>
+                        <div class="flex justify-between text-slate-600">
+                            <span>Costo de Envío:</span>
+                            <span class="font-semibold">$${pedido.costoEnvio.toFixed(2)}</span>
+                        </div>
+                        <div class="flex justify-between text-sm font-black text-kiubo-indigo pt-2 border-t border-slate-200">
+                            <span>Total a Pagar:</span>
+                            <span>$${pedido.totalCliente.toFixed(2)} MXN</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-purple-50 p-4 rounded-xl border border-purple-100 text-[11px] text-purple-900 space-y-1">
+                    <p class="font-bold">📋 Términos y Condiciones de Cotización:</p>
+                    <p>• Anticipo del 50% requerido para iniciar producción y apartado de insumos.</p>
+                    <p>• El 50% restante se liquida al momento de la entrega.</p>
+                    <p>• Cotización válida por 7 días hábiles.</p>
+                </div>
+            `;
+
+            document.body.appendChild(pdfContainer);
+
+            const opt = {
+                margin:       [0.5, 0.5, 0.5, 0.5],
+                filename:     `Cotizacion_KIUBO_${pedido.folio.replace('#', '')}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2 },
+                jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
+            };
+
+            html2pdf().set(opt).from(pdfContainer).save().then(() => {
+                document.body.removeChild(pdfContainer);
+            });
+        }
+
+        function exportToCSV() {
+            if (pedidosHistorial.length === 0) {
+                alert('No hay pedidos registrados para exportar.');
+                return;
+            }
+
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "Folio,FechaRegistro,FechaEntrega,Cliente,Telefono,Instagram,Producto,Tecnica,Cantidad,PrecioUnitario,TotalCliente,InsumosTotal,Inversora,Comision,Vendedora,FondoKiubo,PagoProduccion,Productora,DetalleEntrega,AccesoPrivada\n";
+
+            pedidosHistorial.forEach(p => {
+                const row = [
+                    p.folio,
+                    p.fechaRegistro,
+                    p.fechaEntrega,
+                    `"${p.cliente}"`,
+                    `"${p.telefono || ''}"`,
+                    `"${p.instagram || ''}"`,
+                    `"${p.producto}"`,
+                    `"${p.tecnica}"`,
+                    p.cantidad,
+                    p.precioUnitario,
+                    p.totalCliente,
+                    p.totalInsumos,
+                    p.inversora,
+                    p.comisionVendedora,
+                    p.vendedora,
+                    p.fondoKiubo,
+                    p.pagoProduccion,
+                    p.productora,
+                    `"${p.detalleEntrega}"`,
+                    `"${p.accesoPrivada || ''}"`
+                ].join(",");
+                csvContent += row + "\n";
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `KIUBO_STUDIO_Historial_${new Date().toISOString().slice(0,10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function loadPuntosMedios() {
+            const saved = localStorage.getItem('kiubo_puntos_medios');
+            if (saved) {
+                puntosMediosList = JSON.parse(saved);
+            } else {
+                puntosMediosList = [...DEFAULT_PUNTOS_MEDIOS];
+                localStorage.setItem('kiubo_puntos_medios', JSON.stringify(puntosMediosList));
+            }
+            renderPuntosMediosOptions();
+        }
+
+        function renderPuntosMediosOptions() {
+            selectPuntoMedio.innerHTML = '';
+            puntosMediosList.forEach(pm => {
+                const opt = document.createElement('option');
+                opt.value = pm.id;
+                opt.textContent = `${pm.nombre} (+$${pm.costo})`;
+                selectPuntoMedio.appendChild(opt);
+            });
+            handlePuntoMedioSelectChange();
+        }
+
+        function openModalPM() {
+            modalPuntosMedios.classList.remove('hidden');
+            renderPuntosMediosTable();
+
+            setTimeout(() => {
+                if (!modalMap) {
+                    modalMap = L.map('modal-pm-map').setView([21.1619, -86.8267], 12);
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(modalMap);
+
+                    modalMap.on('click', function(e) {
+                        setModalMapMarker(e.latlng.lat, e.latlng.lng);
+                    });
+                }
+                modalMap.invalidateSize();
+                resetFormPM();
+            }, 200);
+        }
+
+        function closeModalPM() {
+            modalPuntosMedios.classList.add('hidden');
+        }
+
+        function setModalMapMarker(lat, lng) {
+            if (modalMapMarker) {
+                modalMap.removeLayer(modalMapMarker);
+            }
+            modalMapMarker = L.marker([lat, lng], { draggable: true }).addTo(modalMap);
+            pmLat.value = lat.toFixed(6);
+            pmLng.value = lng.toFixed(6);
+
+            modalMapMarker.on('dragend', function(e) {
+                const pos = e.target.getLatLng();
+                pmLat.value = pos.lat.toFixed(6);
+                pmLng.value = pos.lng.toFixed(6);
+            });
+        }
+
+        function resetFormPM() {
+            pmIdEdit.value = '';
+            pmNombre.value = '';
+            pmCosto.value = 30;
+            pmDireccion.value = '';
+            pmLat.value = '21.161900';
+            pmLng.value = '-86.826700';
+            btnCancelarPm.classList.add('hidden');
+            setModalMapMarker(21.1619, -86.8267);
+        }
+
+        function renderPuntosMediosTable() {
+            tablaPmBody.innerHTML = '';
+            puntosMediosList.forEach(pm => {
+                const tr = document.createElement('tr');
+                tr.className = 'border-b border-slate-100 hover:bg-slate-50';
+                tr.innerHTML = `
+                    <td class="p-2 font-bold text-slate-800">${pm.nombre}</td>
+                    <td class="p-2 font-semibold text-kiubo-indigo">$${pm.costo}</td>
+                    <td class="p-2 text-[11px] text-slate-500">${pm.direccion}</td>
+                    <td class="p-2 text-center">
+                        <div class="flex items-center justify-center gap-1">
+                            <button onclick="editPuntoMedio('${pm.id}')" class="p-1 bg-blue-50 text-blue-600 rounded hover:bg-blue-100">
+                                <i class="fa-solid fa-pen-to-square"></i>
+                            </button>
+                            <button onclick="deletePuntoMedio('${pm.id}')" class="p-1 bg-red-50 text-red-600 rounded hover:bg-red-100">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tablaPmBody.appendChild(tr);
+            });
+        }
+
+        function editPuntoMedio(id) {
+            const pm = puntosMediosList.find(p => p.id === id);
+            if (!pm) return;
+
+            pmIdEdit.value = pm.id;
+            pmNombre.value = pm.nombre;
+            pmCosto.value = pm.costo;
+            pmDireccion.value = pm.direccion;
+            pmLat.value = pm.lat;
+            pmLng.value = pm.lng;
+
+            btnCancelarPm.classList.remove('hidden');
+            setModalMapMarker(pm.lat, pm.lng);
+            if (modalMap) modalMap.flyTo([pm.lat, pm.lng], 15);
+        }
+
+        function deletePuntoMedio(id) {
+            if (confirm('¿Deseas eliminar este punto medio?')) {
+                puntosMediosList = puntosMediosList.filter(p => p.id !== id);
+                localStorage.setItem('kiubo_puntos_medios', JSON.stringify(puntosMediosList));
+                renderPuntosMediosOptions();
+                renderPuntosMediosTable();
+            }
+        }
+
+        function handleSavePuntoMedio(e) {
+            e.preventDefault();
+
+            const id = pmIdEdit.value || `pm_${Date.now()}`;
+            const nuevoPm = {
+                id,
+                nombre: pmNombre.value.trim(),
+                costo: parseFloat(pmCosto.value) || 0,
+                direccion: pmDireccion.value.trim(),
+                lat: parseFloat(pmLat.value) || 21.1619,
+                lng: parseFloat(pmLng.value) || -86.8267
+            };
+
+            const index = puntosMediosList.findIndex(p => p.id === id);
+            if (index >= 0) {
+                puntosMediosList[index] = nuevoPm;
+            } else {
+                puntosMediosList.push(nuevoPm);
+            }
+
+            localStorage.setItem('kiubo_puntos_medios', JSON.stringify(puntosMediosList));
+            renderPuntosMediosOptions();
+            renderPuntosMediosTable();
+            resetFormPM();
+        }
+
+        function saveLocalStorage() {
+            localStorage.setItem('kiubo_pedidos_historial', JSON.stringify(pedidosHistorial));
+            localStorage.setItem('kiubo_pedidos_eliminados', JSON.stringify(pedidosEliminados));
+        }
+
+        function loadLocalStorage() {
+            const savedHistorial = localStorage.getItem('kiubo_pedidos_historial');
+            if (savedHistorial) {
+                pedidosHistorial = JSON.parse(savedHistorial);
+                renderPedidosTable();
+                updateGlobalDashboard();
+            }
+            const savedEliminados = localStorage.getItem('kiubo_pedidos_eliminados');
+            if (savedEliminados) {
+                pedidosEliminados = JSON.parse(savedEliminados);
+            }
+        }
+    </script>
+</body>
+</html>
